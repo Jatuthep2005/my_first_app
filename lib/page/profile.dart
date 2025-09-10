@@ -35,7 +35,56 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('ข้อมูลส่วนตัว')),
+      appBar: AppBar(
+        title: const Text('ข้อมูลส่วนตัว'),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              log(value);
+              if (value == 'delete') {
+                showDialog(
+                  context: context,
+                  builder: (context) => SimpleDialog(
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text(
+                          'ยืนยันการยกเลิกสมาชิก?',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text('ปิด'),
+                          ),
+                          FilledButton(
+                            onPressed: delete,
+                            child: const Text('ยืนยัน'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem<String>(
+                value: 'delete',
+                child: Text('ยกเลิกสมาชิก'),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: FutureBuilder(
         future: loadData,
         builder: (context, snapshot) {
@@ -165,5 +214,49 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() {
       loadData = loadDataAsync();
     });
+  }
+
+  void delete() async {
+    var config = await Configuration.getConfig();
+    var url = config['apiEndpoint'];
+
+    var res = await http.delete(Uri.parse('$url/customers/${widget.idx}'));
+    log(res.statusCode.toString());
+    if (res.statusCode == 200) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('สำเร็จ'),
+          content: Text('ลบข้อมูลสำเร็จ'),
+          actions: [
+            FilledButton(
+              onPressed: () {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+              child: const Text('ปิด'),
+            ),
+          ],
+        ),
+      ).then((s) {
+        Navigator.popUntil(context, (route) => route.isFirst);
+      });
+    } else {
+      Navigator.pop(context);
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('ผิดพลาด'),
+          content: Text('ลบข้อมูลไม่สำเร็จ'),
+          actions: [
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('ปิด'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
